@@ -35,7 +35,7 @@ L.game.resources = function() {
 
     //eg. L.load.texture("littleDude.png", "little-dude");
     //    L.load.audio("audioFile", "audioName");
-L.load.texture("grassTile01.jpg","grass");
+    L.load.texture("grassTile01.jpg", "grass");
 };
 
 
@@ -74,13 +74,15 @@ L.game.main = function() {
 	];
 	this.coords = [];
 	this.shadow = 0;
+	this.distance = 0;
     };
     texel.prototype.update = function(dt)
     {
 	//var coords = this.coords;
-	var focal_length = 700;
+	var focal_length = 900;
 	var distance = Math.sqrt(Math.pow(this.x - camera.x, 2) + Math.pow(this.z - camera.z, 2));
-	this.shadow = distance / 20;
+	this.distance = distance;
+	this.shadow = distance / 15;
 	if (this.shadow >= 1)
 	{
 	    return;
@@ -104,7 +106,7 @@ L.game.main = function() {
 	    var y0 = y - camera.y;
 	    var z0 = z - camera.z;
 	    if (z0 >= 0) {
-		this.shadow =1;
+		this.shadow = 1;
 		return;
 	    }
 	    var xCoord = focal_length * x0 / z0 + L.system.width / 2;
@@ -130,9 +132,9 @@ L.game.main = function() {
 	}
 
 	ctx.closePath();
-	var pat = ctx.createPattern(L.texture.grass,"repeat");
+	var pat = ctx.createPattern(L.texture.grass, "repeat");
 	ctx.globalAlpha = 1;
-	ctx.fillStyle = pat;
+	ctx.fillStyle = this.color;
 	ctx.fill();
 	ctx.globalAlpha = shadow;
 	ctx.fillStyle = '#000';
@@ -151,44 +153,90 @@ L.game.main = function() {
 	    testLayer.addObject(new texel(i * 2 + 1, 0, -j * 2 + 1));
 	}
     }
-   /* for (var i = 0; i < 64; i++)
+    var wall = function(x, z, angle, height, color)
     {
-	for (var j = 0; j < 64; j++)
-	{
-	    var plate = new texel(i * 2, 20, -j * 2);
-	    var colors = ["red", "orange", "yellow", "lime", "turquoise", "blueviolet", "magenta"];
-	    plate.color = colors[Math.floor(Math.random() * 7)];
-	    testLayer.addObject(plate);
-	    var plate2 = new texel(i * 2 + 1, 20, -j * 2 + 1);
-	    plate2.color = colors[Math.floor(Math.random() * 7)];
-	    testLayer.addObject(plate2);
-	}
-    }
-*/
+	var newWall = new texel(x, 0, z);
+	newWall.color = color;
+	var verts = Math.rotatePoint(0.5,0,angle);
+	var vertX = verts.x;
+	var vertZ = verts.y;
+	newWall.vertices = [
+	    [vertX, 0, vertZ],
+	    [-vertX, 0, -vertZ],
+	    [-vertX, 2, -vertZ],
+	    [vertX, 2, vertZ]
+	];
+	return newWall;
+    };
+    var wall1 = wall(64,-64,0,2,"turquoise");
+    var wall2 = wall(65,-64,0,2,"turquoise");
+    var wall3 = wall(65.5,-63.5,Math.PI/2,2,"turquoise");
+    var wall4 = wall(65.5,-62.5,Math.PI/2,2,"red");
+    var wall5 = wall(63.5,-62.5,Math.PI/2,2,"turquoise");
+    var wall6 = wall(63.5,-63.5,Math.PI/2,2,"turquoise");
+var sortables = {};
+sortables.objects = [];
+sortables.update = function(dt)
+{
+    this.objects.update(dt);
+    this.objects.sortBy("distance",-1);
+};
+sortables.draw = function(ctx)
+{
+    this.objects.draw(ctx);
+};
+sortables.objects = [wall1,wall2,wall3,wall4,wall5,wall6];
+
+    testLayer.addObject(sortables);
+    /* for (var i = 0; i < 64; i++)
+     {
+     for (var j = 0; j < 64; j++)
+     {
+     var plate = new texel(i * 2, 20, -j * 2);
+     var colors = ["red", "orange", "yellow", "lime", "turquoise", "blueviolet", "magenta"];
+     plate.color = colors[Math.floor(Math.random() * 7)];
+     testLayer.addObject(plate);
+     var plate2 = new texel(i * 2 + 1, 20, -j * 2 + 1);
+     plate2.color = colors[Math.floor(Math.random() * 7)];
+     testLayer.addObject(plate2);
+     }
+     }
+     */
 
 
     testArena.setScene();
 
-    var moveCamera = function(distance)
+    var moveCamera = function(distance,strafe)
     {
-	var xMove = Math.sin(camera.yaw) * distance;
-	var zMove = -Math.cos(camera.yaw) * distance;
+	var yaw = camera.yaw;
+	if (strafe)
+	{
+	    yaw -= Math.PI/2;
+	}
+	var xMove = Math.sin(yaw) * distance;
+	var zMove = -Math.cos(yaw) * distance;
 	camera.x += xMove;
 	camera.z += zMove;
     };
 
     var cameraControl = new L.keyboard.Keymap();
-    cameraControl.bindKey("left", "keydown", function() {
-	camera.yaw += Math.PI / 128;
-    });
-    cameraControl.bindKey("right", "keydown", function() {
+    cameraControl.bindKey("numpad9", "keydown", function() {
 	camera.yaw -= Math.PI / 128;
     });
-    cameraControl.bindKey("up", "keydown", function() {
-	moveCamera(0.05);
+    cameraControl.bindKey("numpad7", "keydown", function() {
+	camera.yaw += Math.PI / 128;
     });
-    cameraControl.bindKey("down", "keydown", function() {
-	moveCamera(-0.05);
+    cameraControl.bindKey("numpad8", "keydown", function() {
+	moveCamera(0.1);
+    });
+    cameraControl.bindKey("numpad2", "keydown", function() {
+	moveCamera(-0.1);
+    });
+     cameraControl.bindKey("numpad6", "keydown", function() {
+	moveCamera(0.1,true);
+    });
+     cameraControl.bindKey("numpad4", "keydown", function() {
+	moveCamera(-0.1,true);
     });
 
     testArena.keymap = cameraControl;
