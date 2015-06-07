@@ -9,7 +9,7 @@ L.game.settings = function() {
     //This is where you may adjust your initial game settings
 
     //Set the internal resolution of your game (width, height)
-    L.system.setResolution(900, 600);
+    L.system.setResolution(600, 240);
 
     //Set the desired DOM location of the game's canvas
     L.system.setCanvasLocation(document.body);
@@ -24,6 +24,8 @@ L.game.settings = function() {
     L.system.setAutoPause(true);
 
     L.system.resourcePath = "games/projectDrome/resources/";
+
+
 
 
 };
@@ -42,6 +44,8 @@ L.game.resources = function() {
 
 
 L.game.main = function() {
+   //   L.system.bufferCanvas[0].style.imageRendering = "-moz-crisp-edges";
+   //   L.system.renderCanvas[0].style.imageRendering = "-moz-crisp-edges";
     //This is where to build game logic such as scenes, sprites,
     //behaviours, and input handling
     //Scenes are stored in L.scene[x], where x is the name of the scene
@@ -60,8 +64,8 @@ L.game.main = function() {
     camera.y = 1;
     camera.z = -1;
     camera.yaw = Math.PI;
-    camera.focalLength = 500;
-    camera.distance = 20;
+    camera.focalLength = 300;
+    camera.distance = 10;
     camera.viewAngle = L.system.width / camera.focalLength;
     camera.speed = 3;
     camera.fwd = false;
@@ -185,6 +189,70 @@ L.game.main = function() {
 	    return;
 	}
 	var coords = this.coords;
+
+	if (this.texture !== undefined)
+	{
+
+	    var texture = this.texture;
+	    var texCoords = this.texCoords || [
+		[0, 0],
+		[texture.width, 0],
+		[texture.width, texture.height],
+		[0, texture.height]
+	    ];
+	    var tris = [[0, 1, 2], [2, 3, 0]]; // Split in two triangles
+	    for (var t = 0; t < 2; t++) {
+		var pp = tris[t];
+		var x0 = coords[pp[0]][0], x1 = coords[pp[1]][0], x2 = coords[pp[2]][0];
+		var y0 = coords[pp[0]][1], y1 = coords[pp[1]][1], y2 = coords[pp[2]][1];
+		var u0 = texCoords[pp[0]][0], u1 = texCoords[pp[1]][0], u2 = texCoords[pp[2]][0];
+		var v0 = texCoords[pp[0]][1], v1 = texCoords[pp[1]][1], v2 = texCoords[pp[2]][1];
+
+		// Set clipping area so that only pixels inside the triangle will
+		// be affected by the image drawing operation
+		ctx.save();
+		ctx.beginPath();
+		ctx.moveTo(x0, y0);
+		ctx.lineTo(x1, y1);
+		ctx.lineTo(x2, y2);
+		ctx.closePath();
+		ctx.clip();
+
+		// Compute matrix transform
+
+		var u0v1 = u0*v1;
+		var u1v2 = u1*v2;
+		var v0u1 = v0*u1;
+		var delta = u0v1 + v0 * u2 + u1v2 - v1 * u2 - v0u1 - u0 * v2;
+		var delta_a = x0 * v1 + v0 * x2 + x1 * v2 - v1 * x2 - v0 * x1 - x0 * v2;
+		var delta_b = u0 * x1 + x0 * u2 + u1 * x2 - x1 * u2 - x0 * u1 - u0 * x2;
+		var delta_c = u0v1 * x2 + v0 * x1 * u2 + x0 * u1v2 - x0 * v1 * u2
+		- v0u1 * x2 - u0 * x1 * v2;
+		var delta_d = y0 * v1 + v0 * y2 + y1 * v2 - v1 * y2 - v0 * y1 - y0 * v2;
+		var delta_e = u0 * y1 + y0 * u2 + u1 * y2 - y1 * u2 - y0 * u1 - u0 * y2;
+		var delta_f = u0v1 * y2 + v0 * y1 * u2 + y0 * u1v2 - y0 * v1 * u2
+		- v0u1 * y2 - u0 * y1 * v2;
+ctx.save();
+		// Draw the transformed image
+		var deltaRecip = 1/delta;
+		ctx.transform(delta_a *deltaRecip, delta_d *deltaRecip,
+		delta_b *deltaRecip, delta_e *deltaRecip,
+		delta_c *deltaRecip, delta_f *deltaRecip);
+		ctx.drawImage(texture, 0, 0);
+ctx.restore();
+		    ctx.fillStyle = "rgba(0,0,0,"+shadow+")";
+		    ctx.fillRect(0,0,L.system.width,L.system.height);
+
+
+		ctx.restore();
+	    }
+	    return;
+	}
+
+
+
+
+
 	ctx.beginPath();
 	ctx.moveTo(coords[3][0], coords[3][1]);
 	for (var i = 0; i < 4; i++)
@@ -197,18 +265,18 @@ L.game.main = function() {
 	ctx.globalAlpha = 1;
 	if (this.colorType === "rgba")
 	{
-	    var lightness = Math.pow(1 - shadow,2);
+	    var lightness = Math.pow(1 - shadow, 2);
 	    var rgba = this.rgba;
-	    var red =  rgba[0];
-	    var green =  rgba[1];
+	    var red = rgba[0];
+	    var green = rgba[1];
 	    var blue = rgba[2];
-	   // var avgGrey = (red+green+blue)/3 * (1-lightness);
-	   // red = Math.floor((red * lightness) + avgGrey) ;
-	   // green = Math.floor((green * lightness) + avgGrey) ;
-	   // blue = Math.floor((blue * lightness) + avgGrey) ;
+	    // var avgGrey = (red+green+blue)/3 * (1-lightness);
+	    // red = Math.floor((red * lightness) + avgGrey) ;
+	    // green = Math.floor((green * lightness) + avgGrey) ;
+	    // blue = Math.floor((blue * lightness) + avgGrey) ;
 	    red = Math.floor(lightness * red);
 	    green = Math.floor(lightness * green);
-	    blue = Math.floor(lightness*blue);
+	    blue = Math.floor(lightness * blue);
 	    var color = "rgba(" + red + "," + green + "," + blue + "," + rgba[3] + ")";
 	}
 	else
@@ -225,10 +293,17 @@ L.game.main = function() {
     {
 	for (var j = 0; j < 64; j++)
 	{
-	    var tex1 = new texel(i + 0.5-32, 0, j + 0.5-32);
+	    var tex1 = new texel(i + 0.5 - 32, 0, j + 0.5 - 32);
 	    // var tex2 = new texel(i * 2 + 1, 0, -j * 2 + 1);
 
 	    tex1.rgba = [100 + (Math.random() * 100), 100 + (Math.random() * 100), 30, 1];
+	    tex1.texture = L.texture.grass;
+	    tex1.texCoords =  [
+		[0, 0],
+		[L.texture.grass.width, 0],
+		[L.texture.grass.width, L.texture.grass.height],
+		[0, L.texture.grass.height]
+	    ];
 
 	    // tex2.rgba = [255,255,255,1];
 
@@ -250,10 +325,13 @@ L.game.main = function() {
     };
     var wall = function(x1, z1, x2, z2, height, color)
     {
+	for (var i = 0; i<2;i++)
+	{
 	var x = (x1 + x2) / 2;
 	var z = (z1 + z2) / 2;
 	var newWall = new texel(x, 0, z);
 	newWall.color = color;
+	newWall.texture = L.texture.stone;
 
 	newWall.vertices = [
 	    [x1 - x, 0, z1 - z],
@@ -262,15 +340,16 @@ L.game.main = function() {
 	    [x1 - x, height, z1 - z]
 	];
 	return newWall;
+    }
     };
     var stonePattern = L.system.bufferContext[0].createPattern(L.texture.stone, "repeat");
     var tileColor = "grey";
     var wallrgba = [255, 255, 255, 1];
     for (var walls = 0; walls < 64; walls++)
     {
-	var wall1 = wall(0, -0.01 + walls, 0, 1.01 + walls, 2, tileColor);
-	var grey = 200 + Math.random()*55;
-	wall1.rgba =  [255, 0, 0, 1];
+	var wall1 = new wall(0, -0.01 + walls, 0, 1.01 + walls, 2, tileColor);
+	var grey = 200 + Math.random() * 55;
+	wall1.rgba = [255, 0, 0, 1];
 	sortables.objects.push(wall1);
     }
     ;
@@ -292,10 +371,10 @@ L.game.main = function() {
 
     for (var towers = 0; towers < tower.length - 1; towers++)
     {
-	var wall1 = wall(tower[towers][0], tower[towers][1], tower[towers + 1][0], tower[towers + 1][1], 3, tileColor);
-var grey = 200 + Math.random()*55;
+	var wall1 = wall(tower[towers][0], tower[towers][1], tower[towers + 1][0], tower[towers + 1][1], 8, tileColor);
+	var grey = 200 + Math.random() * 55;
 	wall1.rgba = [255, 0, 0, 1];
-	sortables.objects.push(wall1);
+	//sortables.objects.push(wall1);
     }
 
 
