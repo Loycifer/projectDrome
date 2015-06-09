@@ -42,6 +42,8 @@ L.game.resources = function() {
     L.load.texture("stone140.jpg", "stone");
     L.load.texture("grassTile01.bmp", "temple");
     L.load.texture("sky.jpg", "sky");
+    L.load.texture("tree01.png", "tree");
+    L.load.texture("tree01-yellow.png", "treeMaskYellow");
 };
 
 
@@ -80,7 +82,7 @@ L.game.main = function() {
     sky2.handle.y = sky.height;
     sky2.scale.x = L.system.width / sky.width;
     sky2.scale.y = -L.system.height / (sky.height);
-    skyLayer.addObject(sky2);
+    // skyLayer.addObject(sky2);
 
     var floorWidth = 128;
 
@@ -89,7 +91,7 @@ L.game.main = function() {
     camera.y = 1.2;
     camera.z = -10;
     camera.yaw = Math.PI;
-    camera.pitch = -0.5;
+    camera.pitch = 0;
     camera.focalLength = 600;
     camera.distance = 10;
     camera.distanceDecay = 0;
@@ -178,8 +180,8 @@ L.game.main = function() {
 
 	if ((Math.abs(relativeAngle) > camera.viewAngle / 2) && (distance > 1))
 	{
-	   // this.shadow = 1;
-	   // return;
+	    // this.shadow = 1;
+	    // return;
 	}
 
 
@@ -201,19 +203,19 @@ L.game.main = function() {
 		y = this.vertices[i][1] + this.y;
 		z = this.vertices[i][2] + this.z;
 	    }
-var rotatedPoint;
+	    var rotatedPoint;
 	    if (camera.yaw !== 0)
 	    {
 		rotatedPoint = Math.rotatePoint(x - camera.x, z - camera.z, camera.yaw);
 		x = rotatedPoint.x + camera.x;
 		z = rotatedPoint.y + camera.z;
 	    }
-if (camera.pitch !== 0)
-{
-    rotatedPoint = Math.rotatePoint (y - camera.y, z - camera.z, camera.pitch);
-    		y = rotatedPoint.x + camera.y;
+	    if (camera.pitch !== 0)
+	    {
+		rotatedPoint = Math.rotatePoint(y - camera.y, z - camera.z, camera.pitch);
+		y = rotatedPoint.x + camera.y;
 		z = rotatedPoint.y + camera.z;
-}
+	    }
 	    x0 = x - camera.x;
 	    y0 = y - camera.y;
 	    z0 = z - camera.z;
@@ -227,22 +229,22 @@ if (camera.pitch !== 0)
 	    this.coords[i] = [xCoord, yCoord];
 
 	}
-	var coordsLength = this.coords.length -1;
+	var coordsLength = this.coords.length - 1;
 	//var anyOnScreen = false;
-	var xMin= this.coords[0][0];
+	var xMin = this.coords[0][0];
 	var xMax = this.coords[0][0];
-	var yMin = -1;
-	var yMax = -1;
+	var yMin = this.coords[0][1];
+	var yMax = this.coords[0][1];
 	for (var coordPair = 1; coordPair < coordsLength; coordPair++)
 	{
 	    var coords = this.coords[coordPair];
 	    var x = coords[0];
 	    var y = coords[1];
 
-	    xMin = Math.min(x,xMin);
-	    xMax = Math.max(x,xMax);
-	    yMin = Math.min(y,yMin);
-	    yMax = Math.max(y,yMax);
+	    xMin = Math.min(x, xMin);
+	    xMax = Math.max(x, xMax);
+	    yMin = Math.min(y, yMin);
+	    yMax = Math.max(y, yMax);
 
 	}
 	if (yMin > L.system.height || yMax < 0 || xMin > L.system.width || xMax < 0)
@@ -330,7 +332,7 @@ if (camera.pitch !== 0)
 		if (this.hasShadow)
 		{
 		    var fogColor = camera.color;
-		    ctx.fillStyle = "rgba(" + fogColor[0] + "," + fogColor[1] + "," + fogColor[2] + "," + (fogColor[3] * Math.pow(shadow,0.5)) + ")";
+		    ctx.fillStyle = "rgba(" + fogColor[0] + "," + fogColor[1] + "," + fogColor[2] + "," + (fogColor[3] * Math.pow(shadow, 0.5)) + ")";
 		    ctx.fillRect(0, 0, L.system.width, L.system.height);
 		}
 
@@ -382,9 +384,9 @@ if (camera.pitch !== 0)
     // var grassPattern = L.system.bufferContext[0].createPattern(L.texture.grass, "repeat");
     for (var i = 0; i < 16; i++)
     {
-	for (var j = 0; j < 32; j++)
+	for (var j = 0; j < 64; j++)
 	{
-	    var tex1 = new texel(i + 0.5 - 8, 0, j + 0.5 - 16);
+	    var tex1 = new texel(i + 0.5 - 8, 0, j + 0.5 - 32);
 	    // var tex2 = new texel(i * 2 + 1, 0, -j * 2 + 1);
 
 	    tex1.rgba = [100 + (Math.random() * 100), 100 + (Math.random() * 100), 30, 1];
@@ -534,6 +536,150 @@ if (camera.pitch !== 0)
      }
      }
      */
+
+    var Sprite3D = function()
+    {
+	this.x = 0;
+	this.y = 0;
+	this.z = 0;
+	this.height = 1;
+	this.texture;
+	this.shadow = L.texture.treeMaskYellow;
+	this.handle = {
+	    x: 0,
+	    y: 0
+	};
+	this.coords = [];
+	this.shadow = 0;
+	this.distance = 0;
+    };
+
+    Sprite3D.prototype.setTexture = function(textureName)
+    {
+	this.texture = L.texture[textureName];
+	this.handle.x = this.texture.width / 2;
+	this.handle.y = this.texture.height;
+    };
+    Sprite3D.prototype.update = function(dt)
+    {
+	this.shadow = 0;
+	this.distance = Math.sqrt(Math.pow(this.x - camera.x, 2) + Math.pow(this.y - camera.y, 2) + Math.pow(this.z - camera.z, 2));
+	var x, y, z, x0, y0, z0, xCoord, yCoord;
+	for (var i = 0; i < 2; i++)
+	{
+	    if (i === 0)
+	    {
+		x = this.x;
+		y = this.y;
+		z = this.z;
+	    }
+	    else
+	    {
+		x = this.x;
+		y = this.y + this.height;
+		z = this.z;
+	    }
+
+
+
+	    var rotatedPoint;
+	    if (camera.yaw !== 0)
+	    {
+		rotatedPoint = Math.rotatePoint(x - camera.x, z - camera.z, camera.yaw);
+		x = rotatedPoint.x + camera.x;
+		z = rotatedPoint.y + camera.z;
+	    }
+	    if (camera.pitch !== 0)
+	    {
+		rotatedPoint = Math.rotatePoint(y - camera.y, z - camera.z, camera.pitch);
+		y = rotatedPoint.x + camera.y;
+		z = rotatedPoint.y + camera.z;
+	    }
+	    x0 = x - camera.x;
+	    y0 = y - camera.y;
+	    z0 = z - camera.z;
+	    if (z0 >= 0) {
+
+		this.shadow = 1;
+		return;
+	    }
+	    xCoord = camera.focalLength * x0 / z0 + L.system.width / 2;
+	    yCoord = camera.focalLength * y0 / z0 + L.system.height / 2;
+	    this.coords[i] = [xCoord, yCoord];
+
+	}
+	var coordsLength = this.coords.length;
+	//var anyOnScreen = false;
+	var xMin = this.coords[0][0];
+	var xMax = this.coords[0][0];
+	var yMin = this.coords[0][1];
+	var yMax = this.coords[0][1];
+	for (var coordPair = 1; coordPair < coordsLength; coordPair++)
+	{
+	    var coords = this.coords[coordPair];
+	    var x = coords[0];
+	    var y = coords[1];
+
+	    xMin = Math.min(x, xMin);
+	    xMax = Math.max(x, xMax);
+	    yMin = Math.min(y, yMin);
+	    yMax = Math.max(y, yMax);
+
+	}
+	if (yMin > L.system.height || yMax < 0 || xMin > L.system.width || xMax < 0)
+	{
+	    //this.shadow = 1;
+	    //return;
+	}
+    };
+    Sprite3D.prototype.draw = function(ctx)
+    {
+
+	ctx.globalAlpha = 1;
+	var x0 = this.coords[0][0];
+	var y0 = this.coords[0][1];
+	var x1 = this.coords[1][0];
+	var y1 = this.coords[1][1];
+	var proportion = Math.abs((y1 - y0) / this.texture.height);
+
+	var height = proportion * this.texture.height;
+	var width = proportion * this.texture.width;
+
+	ctx.save();
+	ctx.translate(x0, y0);
+	ctx.scale(proportion, proportion);
+	ctx.drawImage(L.texture.treeMaskYellow, -this.handle.x, -this.handle.y);
+	var distanceFade = this.distance / camera.distance;
+	if (distanceFade >= 1) {
+	    distanceFade = 1;
+	}
+	ctx.globalAlpha = 1 - distanceFade;
+	ctx.drawImage(this.texture, -this.handle.x, -this.handle.y);
+	ctx.globalAlpha = 1;
+	ctx.restore();
+    };
+for (var treeRows = 0; treeRows < 5; treeRows++)
+{
+for (var treeCount = 0; treeCount <2; treeCount++)
+{
+    var tree01 = new Sprite3D();
+    tree01.setTexture("tree");
+    tree01.handle = {
+	x: 327,
+	y: 692
+    };
+    tree01.height = 3.5;
+    tree01.x = -2 + treeCount * 4;
+    tree01.z = 1.5 + treeRows * 3;
+    sortables.objects.push(tree01);
+}
+}
+
+
+
+
+
+
     testLayer.addObject(sortables);
     testLayer.addObject(camera);
 
@@ -596,10 +742,10 @@ if (camera.pitch !== 0)
     cameraControl.bindKey("shift", "keyup", function() {
 	camera.speed = 3;
     });
-     cameraControl.bindKey("numpad1", "keydown", function() {
+    cameraControl.bindKey("numpad1", "keydown", function() {
 	camera.pitch -= 0.1;
     });
-     cameraControl.bindKey("numpad3", "keydown", function() {
+    cameraControl.bindKey("numpad3", "keydown", function() {
 	camera.pitch += 0.1;
     });
 
