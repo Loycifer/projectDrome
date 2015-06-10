@@ -92,12 +92,14 @@ L.game.main = function() {
     camera.z = -10;
     camera.yaw = Math.PI;
     camera.pitch = 0;
-    camera.focalLength = 600;
-    camera.distance = 10;
+    camera.focalLength = 800;
+    camera.distance = 15;
     camera.distanceDecay = 0;
     camera.viewAngle = L.system.width / camera.focalLength;
     camera.color = [226, 157, 38, 1];
     camera.speed = 3;
+
+    testArena.camera = camera;
 
     camera.fwd = false;
     camera.bwd = false;
@@ -143,28 +145,38 @@ L.game.main = function() {
 	this.color = "white";
 	this.hasShadow = true;
 	this.highTextureDistance = 3;
-	//this.resolution = 2;
-	//this.width = 1;
+	this.backfaceCulling = false;
+	this.isOnScreen = false;
 	this.vertices = [
-	    [-0.51, 0, -0.51],
-	    [0.51, 0, -0.51],
-	    [0.51, 0, 0.51],
-	    [-0.51, 0, 0.51]
+	    [-0.501, 0, -0.501],
+	    [0.501, 0, -0.501],
+	    [0.501, 0, 0.501],
+	    [-0.501, 0, 0.501]
 	];
 	this.coords = [];
 	this.shadow = 0;
-	this.distance = 0;
+	this.distance = 0
+	this.xMin = 0;
+	this.xMax = 0;
+	this.yMin = 0;
+	this.yMax = 0;
     };
     texel.prototype.update = function(dt)
     {
-	var Math = window.Math;
-	//var coords = this.coords;
-	var focal_length = camera.focalLength;
-	var xRel = this.x - camera.x;
-	var yRel = this.y - camera.y;
-	var zRel = this.z - camera.z;
 
-	var distance = this.distance = Math.sqrt(Math.pow(xRel, 2) + Math.pow(yRel, 2) + Math.pow(zRel, 2));
+	var Math = window.Math;
+	var rotatePoint = Math.rotatePoint;
+	var pow = Math.pow;
+	var width = L.system.width;
+	var height = L.system.height;
+	var focal_length = camera.focalLength;
+	var worldX = this.x, worldY = this.y, worldZ = this.z;
+	var cameraX = camera.x, cameraY = camera.y, cameraZ = camera.z;
+	var xRel = worldX - cameraX;
+	var yRel = worldY - cameraY;
+	var zRel = worldZ - cameraZ;
+
+	var distance = this.distance = Math.sqrt(xRel * xRel + yRel * yRel + zRel * zRel);
 
 
 
@@ -174,88 +186,136 @@ L.game.main = function() {
 	    return;
 	}
 
-	var relativeCoords = Math.rotatePoint(xRel, zRel, camera.yaw - (Math.PI / 2));
+	var relativeCoords = rotatePoint(xRel, zRel, camera.yaw - (Math.PI / 2));
 
-	var relativeAngle = Math.atan(-(relativeCoords.y) / (relativeCoords.x + 1));
-
-	if ((Math.abs(relativeAngle) > camera.viewAngle / 2) && (distance > 1))
+	if (relativeCoords.x < -2)
 	{
-	    // this.shadow = 1;
-	    // return;
+	    this.shadow = 1;
+	    return;
 	}
 
+	var relativeAngle = Math.atan(-(relativeCoords.y) / (relativeCoords.x + 2));
 
-
-
-
-	var x, y, z, x0, y0, z0, xCoord, yCoord;
-	for (var i = 0; i < 5; i++)
-	{
-	    if (i === 4)
-	    {
-		x = this.x;
-		y = this.y + (this.vertices[0][1] + this.vertices[1][1] + this.vertices[2][1] + this.vertices[3][1]) / 4;
-		z = this.z;
-	    }
-	    else
-	    {
-		x = this.vertices[i][0] + this.x;
-		y = this.vertices[i][1] + this.y;
-		z = this.vertices[i][2] + this.z;
-	    }
-	    var rotatedPoint;
-	    if (camera.yaw !== 0)
-	    {
-		rotatedPoint = Math.rotatePoint(x - camera.x, z - camera.z, camera.yaw);
-		x = rotatedPoint.x + camera.x;
-		z = rotatedPoint.y + camera.z;
-	    }
-	    if (camera.pitch !== 0)
-	    {
-		rotatedPoint = Math.rotatePoint(y - camera.y, z - camera.z, camera.pitch);
-		y = rotatedPoint.x + camera.y;
-		z = rotatedPoint.y + camera.z;
-	    }
-	    x0 = x - camera.x;
-	    y0 = y - camera.y;
-	    z0 = z - camera.z;
-	    if (z0 >= 0) {
-
-		this.shadow = 1;
-		return;
-	    }
-	    xCoord = focal_length * x0 / z0 + L.system.width / 2;
-	    yCoord = focal_length * y0 / z0 + L.system.height / 2;
-	    this.coords[i] = [xCoord, yCoord];
-
-	}
-	var coordsLength = this.coords.length - 1;
-	//var anyOnScreen = false;
-	var xMin = this.coords[0][0];
-	var xMax = this.coords[0][0];
-	var yMin = this.coords[0][1];
-	var yMax = this.coords[0][1];
-	for (var coordPair = 1; coordPair < coordsLength; coordPair++)
-	{
-	    var coords = this.coords[coordPair];
-	    var x = coords[0];
-	    var y = coords[1];
-
-	    xMin = Math.min(x, xMin);
-	    xMax = Math.max(x, xMax);
-	    yMin = Math.min(y, yMin);
-	    yMax = Math.max(y, yMax);
-
-	}
-	if (yMin > L.system.height || yMax < 0 || xMin > L.system.width || xMax < 0)
+	if ((Math.abs(relativeAngle) > camera.viewAngle / 2) && (distance > 2))
 	{
 	    this.shadow = 1;
 	    return;
 	}
 
 
+
+
+
+// Need to combine all the following for loops into one for loop... no point in running a bunch of loops nearly the same size.
+	var x, y, z, x0, y0, z0, xCoord, yCoord;
+	var xMin, xMax, yMin, yMax;
+	var vertices = this.vertices;
+	var numberOfCoords = vertices.length + 1;
+	var coords = [];
+
+	for (var i = 0; i < numberOfCoords; i++)
+	{
+	    if (i === numberOfCoords - 1)
+	    {
+		x = worldX;
+		y = worldY + (vertices[0][1] + vertices[1][1] + vertices[2][1] + vertices[3][1]) / 4;
+		z = worldZ;
+	    }
+	    else
+	    {
+		x = vertices[i][0]*1.01 + worldX;
+		y = vertices[i][1] *1.01 + worldY;
+		z = vertices[i][2] *1.01 + worldZ;
+	    }
+	    var rotatedPoint;
+	    if (camera.yaw !== 0)
+	    {
+		rotatedPoint = rotatePoint(x - cameraX, z - cameraZ, camera.yaw);
+		x = rotatedPoint.x + cameraX;
+		z = rotatedPoint.y + cameraZ;
+	    }
+	    if (camera.pitch !== 0)
+	    {
+		rotatedPoint = rotatePoint(y - cameraY, z - cameraZ, camera.pitch);
+		y = rotatedPoint.x + cameraY;
+		z = rotatedPoint.y + cameraZ;
+	    }
+	    x0 = x - cameraX;
+	    y0 = y - cameraY;
+	    z0 = z - cameraZ;
+	    if (z0 >= 0) {
+
+		this.shadow = 1;
+		return;
+	    }
+	    xCoord = focal_length * x0 / z0 + width / 2;
+	    yCoord = focal_length * y0 / z0 + height / 2;
+
+	    if (i === 0)
+	    {
+		xMin = xCoord;
+		xMax = xCoord;
+		yMin = yCoord;
+		yMax = yCoord;
+	    }
+	    else
+	    {
+		xMin = Math.min(xCoord, xMin);
+		xMax = Math.max(xCoord, xMax);
+		yMin = Math.min(yCoord, yMin);
+		yMax = Math.max(yCoord, yMax);
+	    }
+	    coords[i] = [xCoord, yCoord];
+	}
+
+	//var coordsLength = coords.length - 1;
+
+	if (yMin > height || yMax < 0 || xMin > width || xMax < 0)
+	{
+	    this.shadow = 1;
+	    return;
+	}
+
+	this.coords = coords;
+
+
+	this.xMin = xMin;
+	this.xMax = xMax;
+	this.yMin = yMin;
+	this.yMax = yMax;
+
+
+	/*
+
+	 if (this.backfaceCulling)
+	 {
+	 var edgeSum = 0;
+
+	 for (var edgeCount = 0; edgeCount < coordsLength; edgeCount++)
+	 {
+	 if (edgeCount === coordsLength - 1)
+	 {
+	 var nextIndex = 0;
+
+	 }
+	 else
+	 {
+	 var nextIndex = edgeCount + 1;
+	 }
+	 edgeSum += (this.coords[nextIndex][0] - this.coords[edgeCount][0]) * (this.coords[nextIndex][1] + this.coords[edgeCount][1]);
+
+	 }
+	 if (edgeSum < 0)
+	 {
+	 this.shadow = 1;
+	 return;
+	 }
+
+	 }*/
+
+
     };
-    texel.prototype.draw = function(ctx)
+    texel.prototype.draw = function(ctx, camera)
     {
 
 
@@ -265,6 +325,8 @@ L.game.main = function() {
 	{
 	    return;
 	}
+	var width = L.system.width;
+	var height = L.system.height;
 	var coords = this.coords;
 
 
@@ -272,30 +334,38 @@ L.game.main = function() {
 	{
 
 	    var texture = this.texture;
-	    var texWidth = texture.width;
-	    var texHeight = texture.height;
-	    var texCoords = [
-		[0, 0],
-		[texWidth, 0],
-		[texWidth, texHeight],
-		[0, texHeight],
-		[texWidth / 2, texHeight / 2]
-	    ];
+	    var texCoords = this.texCoords;
+	    var tris = [];
+	    var trisLength = 0;
 	    if (this.distance > this.highTextureDistance)
 	    {
-		var tris = [[0, 1, 2], [2, 3, 0]]; // Split in two triangles
+		tris = [[0, 1, 2], [2, 3, 0]]; // Split in two triangles
 	    }
 	    else
 	    {
-		var tris = [[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]];
+		tris = [[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]];
 	    }
-	    var trisLength = tris.length;
+	    trisLength = tris.length;
+	    var fogColor = camera.color;
+	    var fogColorString = "rgba(" + fogColor[0] + "," + fogColor[1] + "," + fogColor[2] + "," + (fogColor[3] * Math.pow(shadow, 0.5)) + ")";
+	    ctx.fillStyle = fogColorString;
+
+	    var pp, pp0, pp1, pp2;
+	    var x0, x1, x2;
+	    var y0, y1, y2;
+	    var u0, u1, u2;
+	    var v0, v1, v2;
+	    var deltaRecip;
+	    var hScale, hSkew, vSkew, vScale, hMove, vMove;
 	    for (var t = 0; t < trisLength; t++) {
-		var pp = tris[t];
-		var x0 = coords[pp[0]][0], x1 = coords[pp[1]][0], x2 = coords[pp[2]][0];
-		var y0 = coords[pp[0]][1], y1 = coords[pp[1]][1], y2 = coords[pp[2]][1];
-		var u0 = texCoords[pp[0]][0], u1 = texCoords[pp[1]][0], u2 = texCoords[pp[2]][0];
-		var v0 = texCoords[pp[0]][1], v1 = texCoords[pp[1]][1], v2 = texCoords[pp[2]][1];
+		pp = tris[t];
+		pp0 = pp[0];
+		pp1 = pp[1];
+		pp2 = pp[2];
+		x0 = coords[pp0][0], x1 = coords[pp1][0], x2 = coords[pp2][0];
+		y0 = coords[pp0][1], y1 = coords[pp1][1], y2 = coords[pp2][1];
+		u0 = texCoords[pp0][0], u1 = texCoords[pp1][0], u2 = texCoords[pp2][0];
+		v0 = texCoords[pp0][1], v1 = texCoords[pp1][1], v2 = texCoords[pp2][1];
 
 		// Set clipping area so that only pixels inside the triangle will
 		// be affected by the image drawing operation
@@ -309,36 +379,41 @@ L.game.main = function() {
 
 		// Compute matrix transform
 
-		var u0v1 = u0 * v1;
-		var u1v2 = u1 * v2;
-		var v0u1 = v0 * u1;
-		var delta = u0v1 + v0 * u2 + u1v2 - v1 * u2 - v0u1 - u0 * v2;
-		var delta_a = x0 * v1 + v0 * x2 + x1 * v2 - v1 * x2 - v0 * x1 - x0 * v2;
-		var delta_b = u0 * x1 + x0 * u2 + u1 * x2 - x1 * u2 - x0 * u1 - u0 * x2;
-		var delta_c = u0v1 * x2 + v0 * x1 * u2 + x0 * u1v2 - x0 * v1 * u2
-		- v0u1 * x2 - u0 * x1 * v2;
-		var delta_d = y0 * v1 + v0 * y2 + y1 * v2 - v1 * y2 - v0 * y1 - y0 * v2;
-		var delta_e = u0 * y1 + y0 * u2 + u1 * y2 - y1 * u2 - y0 * u1 - u0 * y2;
-		var delta_f = u0v1 * y2 + v0 * y1 * u2 + y0 * u1v2 - y0 * v1 * u2
-		- v0u1 * y2 - u0 * y1 * v2;
+		//var u0v1 = u0 * v1;
+		//var u1v2 = u1 * v2;
+		//var v0u1 = v0 * u1;
+		deltaRecip = 1 / (u0 * v1 + v0 * u2 + u1 * v2 - v1 * u2 - v0 * u1 - u0 * v2);
+		hScale = (x0 * v1 + v0 * x2 + x1 * v2 - v1 * x2 - v0 * x1 - x0 * v2) * deltaRecip;
+		hSkew = (y0 * v1 + v0 * y2 + y1 * v2 - v1 * y2 - v0 * y1 - y0 * v2) * deltaRecip;
+		vSkew = (u0 * x1 + x0 * u2 + u1 * x2 - x1 * u2 - x0 * u1 - u0 * x2) * deltaRecip;
+		vScale = (u0 * y1 + y0 * u2 + u1 * y2 - y1 * u2 - y0 * u1 - u0 * y2) * deltaRecip;
+		hMove = (u0 * v1 * x2 + v0 * x1 * u2 + x0 * u1 * v2 - x0 * v1 * u2
+		- v0 * u1 * x2 - u0 * x1 * v2) * deltaRecip;
+		vMove = (u0 * v1 * y2 + v0 * y1 * u2 + y0 * u1 * v2 - y0 * v1 * u2 - v0 * u1 * y2 - u0 * y1 * v2) * deltaRecip;
 		ctx.save();
 		// Draw the transformed image
-		var deltaRecip = 1 / delta;
-		ctx.transform(delta_a * deltaRecip, delta_d * deltaRecip,
-		delta_b * deltaRecip, delta_e * deltaRecip,
-		delta_c * deltaRecip, delta_f * deltaRecip);
+		ctx.transform(hScale, hSkew, vSkew, vScale, hMove, vMove);
 		ctx.drawImage(texture, 0, 0);
+
 		ctx.restore();
 		if (this.hasShadow)
 		{
-		    var fogColor = camera.color;
-		    ctx.fillStyle = "rgba(" + fogColor[0] + "," + fogColor[1] + "," + fogColor[2] + "," + (fogColor[3] * Math.pow(shadow, 0.5)) + ")";
-		    ctx.fillRect(0, 0, L.system.width, L.system.height);
+
+		    // ctx.fillStyle = fogColorString;
+		    x1 = this.xMin - 2;
+		    y1 = this.yMin - 2;
+		    x2 = (this.xMax - x1) + 2;
+		    y2 = (this.yMax - y1) + 2;
+
+		    ctx.fillRect(x1, y1, x2, y2);
+		    // ctx.fillRect(0,0, width, height);
 		}
 
 
 		ctx.restore();
 	    }
+
+
 	    return;
 	}
 
@@ -363,10 +438,6 @@ L.game.main = function() {
 	    var red = rgba[0];
 	    var green = rgba[1];
 	    var blue = rgba[2];
-	    // var avgGrey = (red+green+blue)/3 * (1-lightness);
-	    // red = Math.floor((red * lightness) + avgGrey) ;
-	    // green = Math.floor((green * lightness) + avgGrey) ;
-	    // blue = Math.floor((blue * lightness) + avgGrey) ;
 	    red = Math.floor(lightness * red);
 	    green = Math.floor(lightness * green);
 	    blue = Math.floor(lightness * blue);
@@ -395,7 +466,8 @@ L.game.main = function() {
 		[0, 0],
 		[L.texture.grass.width, 0],
 		[L.texture.grass.width, L.texture.grass.height],
-		[0, L.texture.grass.height]
+		[0, L.texture.grass.height],
+		[L.texture.grass.width / 2, L.texture.grass.height / 2]
 	    ];
 
 	    // tex2.rgba = [255,255,255,1];
@@ -440,16 +512,17 @@ L.game.main = function() {
 	this.objects.update(dt);
 	this.objects.sortBy("distance", -1);
     };
-    sortables.draw = function(ctx)
+    sortables.draw = function(ctx, camera)
     {
 	var objArray = this.objects;
 	var arrayLength = objArray.length;
+	var currentObject = {};
 	for (var i = 0; i < arrayLength; i++)
 	{
-	    var currentObject = objArray[i];
+	    currentObject = objArray[i];
 	    if (currentObject.shadow < 1)
 	    {
-		objArray[i].draw(ctx);
+		objArray[i].draw(ctx, camera);
 	    }
 	}
 	//this.objects.draw(ctx);
@@ -470,6 +543,14 @@ L.game.main = function() {
 		[x2 - x, 1, z2 - z],
 		[x1 - x, 1, z1 - z]
 	    ];
+	    newWall.texCoords = [
+		[0, 0],
+		[L.texture.stone.width, 0],
+		[L.texture.stone.width, L.texture.stone.height],
+		[0, L.texture.stone.height],
+		[L.texture.stone.width / 2, L.texture.stone.height / 2]
+	    ];
+
 	    return newWall;
 	}
     };
@@ -552,6 +633,7 @@ L.game.main = function() {
 	this.coords = [];
 	this.shadow = 0;
 	this.distance = 0;
+	this.zScale = 0;
     };
 
     Sprite3D.prototype.setTexture = function(textureName)
@@ -562,8 +644,68 @@ L.game.main = function() {
     };
     Sprite3D.prototype.update = function(dt)
     {
-	this.shadow = 0;
-	this.distance = Math.sqrt(Math.pow(this.x - camera.x, 2) + Math.pow(this.y - camera.y, 2) + Math.pow(this.z - camera.z, 2));
+	this.shadow = 1;
+	var focalLength = camera.focalLength;
+	var xRel = this.x - camera.x;
+	var yRel = this.y - camera.y;
+	var zRel = this.z - camera.z;
+
+	var distance = this.distance = Math.sqrt(Math.pow(xRel, 2) + Math.pow(yRel, 2) + Math.pow(zRel, 2));
+//this.zScale = 1/(camera.focalLength/(this.distance + this.distance));
+
+
+
+//objectPixelHeight=(height/distance)/focalLength* Camera.main.pixelHeight);
+
+
+
+	this.shadow = distance / camera.distance;
+	if (this.shadow >= 1)
+	{
+	    return;
+	}
+
+	var relativeCoords = Math.rotatePoint(xRel, zRel, camera.yaw - (Math.PI / 2));
+
+
+
+
+
+
+
+	/*
+	 object height (pixels)) = focal length (mm) * real height of the object (mm) * image height (pixels)
+	 ---------------------------------------------------------------------------
+	 distance to object (mm)* sensor height (mm)
+	 */
+
+
+
+
+	/*
+	 if (relativeCoords.x < -2)
+	 {
+	 this.shadow = 1;
+	 return;
+	 }
+
+	 var relativeAngle = Math.atan(-(relativeCoords.y) / (relativeCoords.x + 1));
+
+	 if ((Math.abs(relativeAngle) > camera.viewAngle / 2) && (distance > 2))
+	 {
+	 this.shadow = 1;
+	 return;
+	 }
+	 */
+
+
+
+
+
+
+
+
+
 	var x, y, z, x0, y0, z0, xCoord, yCoord;
 	for (var i = 0; i < 2; i++)
 	{
@@ -576,7 +718,7 @@ L.game.main = function() {
 	    else
 	    {
 		x = this.x;
-		y = this.y + this.height;
+		y = this.y;//this.y + this.height;
 		z = this.z;
 	    }
 
@@ -589,48 +731,66 @@ L.game.main = function() {
 		x = rotatedPoint.x + camera.x;
 		z = rotatedPoint.y + camera.z;
 	    }
+
 	    if (camera.pitch !== 0)
 	    {
 		rotatedPoint = Math.rotatePoint(y - camera.y, z - camera.z, camera.pitch);
 		y = rotatedPoint.x + camera.y;
 		z = rotatedPoint.y + camera.z;
 	    }
+
 	    x0 = x - camera.x;
 	    y0 = y - camera.y;
 	    z0 = z - camera.z;
+
+	    if (i === 0)
+	    {
+		//this.zScale = (L.system.height / -z0 / camera.focalLength);
+	    }
+	    else
+	    {
+		y0 += 1;
+	    }
+
+
+
 	    if (z0 >= 0) {
 
 		this.shadow = 1;
 		return;
 	    }
-	    xCoord = camera.focalLength * x0 / z0 + L.system.width / 2;
-	    yCoord = camera.focalLength * y0 / z0 + L.system.height / 2;
+
+	    xCoord = focalLength * x0 / z0 + L.system.width / 2;
+	    yCoord = focalLength * y0 / z0 + L.system.height / 2;
+
 	    this.coords[i] = [xCoord, yCoord];
 
 	}
-	var coordsLength = this.coords.length;
+	//var coordsLength = this.coords.length;
 	//var anyOnScreen = false;
-	var xMin = this.coords[0][0];
-	var xMax = this.coords[0][0];
-	var yMin = this.coords[0][1];
-	var yMax = this.coords[0][1];
-	for (var coordPair = 1; coordPair < coordsLength; coordPair++)
-	{
-	    var coords = this.coords[coordPair];
-	    var x = coords[0];
-	    var y = coords[1];
+	/*
+	 var xMin = this.coords[0][0];
+	 var xMax = this.coords[0][0];
+	 var yMin = this.coords[0][1];
+	 var yMax = this.coords[0][1];
+	 for (var coordPair = 1; coordPair < coordsLength; coordPair++)
+	 {
+	 var coords = this.coords[coordPair];
+	 var x = coords[0];
+	 var y = coords[1];
 
-	    xMin = Math.min(x, xMin);
-	    xMax = Math.max(x, xMax);
-	    yMin = Math.min(y, yMin);
-	    yMax = Math.max(y, yMax);
+	 xMin = Math.min(x, xMin);
+	 xMax = Math.max(x, xMax);
+	 yMin = Math.min(y, yMin);
+	 yMax = Math.max(y, yMax);
 
-	}
-	if (yMin > L.system.height || yMax < 0 || xMin > L.system.width || xMax < 0)
-	{
-	    //this.shadow = 1;
-	    //return;
-	}
+	 }
+	 if (yMin > L.system.height || yMax < 0 || xMin > L.system.width || xMax < 0)
+	 {
+	 this.shadow = 1;
+	 return;
+	 }
+	 */
     };
     Sprite3D.prototype.draw = function(ctx)
     {
@@ -640,8 +800,10 @@ L.game.main = function() {
 	var y0 = this.coords[0][1];
 	var x1 = this.coords[1][0];
 	var y1 = this.coords[1][1];
-	var proportion = Math.abs((y1 - y0) / this.texture.height);
 
+	var proportion = (y0 - y1) * this.height / this.texture.height;
+	//var proportion = this.zScale;
+	//var proportion =
 	var height = proportion * this.texture.height;
 	var width = proportion * this.texture.width;
 
@@ -658,22 +820,22 @@ L.game.main = function() {
 	ctx.globalAlpha = 1;
 	ctx.restore();
     };
-for (var treeRows = 0; treeRows < 5; treeRows++)
-{
-for (var treeCount = 0; treeCount <2; treeCount++)
-{
-    var tree01 = new Sprite3D();
-    tree01.setTexture("tree");
-    tree01.handle = {
-	x: 327,
-	y: 692
-    };
-    tree01.height = 3.5;
-    tree01.x = -2 + treeCount * 4;
-    tree01.z = 1.5 + treeRows * 3;
-    sortables.objects.push(tree01);
-}
-}
+    for (var treeRows = 0; treeRows < 1; treeRows++)
+    {
+	for (var treeCount = 0; treeCount < 1; treeCount++)
+	{
+	    var tree01 = new Sprite3D();
+	    tree01.setTexture("tree");
+	    tree01.handle = {
+		x: 327,
+		y: 692
+	    };
+	    tree01.height = 4;
+	    tree01.x = -2 + treeCount * 4;
+	    tree01.z = -1.5 + treeRows * 3;
+	    // sortables.objects.push(tree01);
+	}
+    }
 
 
 
