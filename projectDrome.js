@@ -9,7 +9,7 @@ L.game.settings = function() {
     //This is where you may adjust your initial game settings
 
     //Set the internal resolution of your game (width, height)
-    L.system.setResolution(900, 500);
+    L.system.setResolution(1600, 900);
 
     //Set the desired DOM location of the game's canvas
     L.system.setCanvasLocation(document.body);
@@ -39,11 +39,16 @@ L.game.resources = function() {
     //eg. L.load.texture("littleDude.png", "little-dude");
     //    L.load.audio("audioFile", "audioName");
     L.load.texture("grassTile01.jpg", "grass");
-    L.load.texture("stone140.jpg", "stone");
-    L.load.texture("grassTile01.bmp", "temple");
+    // L.load.texture("stone140.jpg", "stone");
+    L.load.texture("wall.png", "stone");
+    L.load.texture("temple.BMP", "temple");
     L.load.texture("sky.jpg", "sky");
     L.load.texture("tree01.png", "tree");
     L.load.texture("tree01-yellow.png", "treeMaskYellow");
+    L.load.texture("flower.png", "flowerRed");
+    L.load.texture("flowerYellow.png", "flowerYellow");
+    L.load.texture("flowerCyan.png", "flowerCyan");
+    L.load.texture("flower-mask.png", "flowerRedMask");
 };
 
 
@@ -58,7 +63,7 @@ L.game.main = function() {
     //    mainScene.layers.background.addObject(someExistingObject);
     //    mainScene.setScene();
     var testArena = new L.objects.Scene("testArena");
-    testArena.bgFill = "rgb(226,157,38)";
+    testArena.bgFill = "rgb(2,27,58)";
     // testArena.motionBlur = 0.8;
     var testLayer = testArena.newLayer("testLayer");
 
@@ -73,6 +78,7 @@ L.game.main = function() {
     sky.scale.x = L.system.width / sky.width;
     sky.scale.y = L.system.height / (sky.height * 2);
     skyLayer.addObject(sky);
+    skyLayer.scrollRateX = 0;
 
     var sky2 = new L.objects.Sprite("sky");
     sky2.x = 0;
@@ -86,17 +92,19 @@ L.game.main = function() {
 
     var floorWidth = 128;
 
-    var camera = {};
-    camera.x = 0;
-    camera.y = 1.2;
-    camera.z = -10;
+    var camera = new L.objects.Camera();
+    camera.setXYZ(0, 1.2, -10);
+
+
     camera.yaw = Math.PI;
     camera.pitch = 0;
-    camera.focalLength = 800;
+
+
+    camera.focalLength = 1000;
     camera.distance = 15;
-    camera.distanceDecay = 0;
-    camera.viewAngle = L.system.width / camera.focalLength;
-    camera.color = [226, 157, 38, 1];
+    camera.distanceDecay = 0.5;
+    camera.viewAngle = camera.getViewAngle();
+    camera.color = [2, 27, 58, 1];
     camera.speed = 3;
 
     testArena.camera = camera;
@@ -144,27 +152,40 @@ L.game.main = function() {
 	this.colorType = "rgba";
 	this.color = "white";
 	this.hasShadow = true;
-	this.highTextureDistance = 3;
+	this.highTextureDistance = 7;
 	this.backfaceCulling = false;
+	this.distanceScaleFactor = 1;
 	this.isOnScreen = false;
 	this.vertices = [
-	    [-0.501, 0, -0.501],
-	    [0.501, 0, -0.501],
-	    [0.501, 0, 0.501],
-	    [-0.501, 0, 0.501]
+	    [-0.500, 0, -0.500],
+	    [0.500, 0, -0.500],
+	    [0.500, 0, 0.500],
+	    [-0.500, 0, 0.500]
 	];
 	this.coords = [];
 	this.shadow = 0;
-	this.distance = 0
+	this.distance = 0;
 	this.xMin = 0;
 	this.xMax = 0;
 	this.yMin = 0;
 	this.yMax = 0;
     };
+
+    texel.prototype.scale = function(scalar)
+    {
+	var verticesLength = this.vertices.length;
+	for (var currentVertex = 0; currentVertex < verticesLength; currentVertex++)
+	{
+	    for (var currentCoordinate = 0; currentCoordinate < 3; currentCoordinate++)
+	    {
+		this.vertices[currentVertex][currentCoordinate] *= scalar;
+	    }
+	}
+    };
     texel.prototype.update = function(dt)
     {
 
-	var Math = window.Math;
+	//var Math = window.Math;
 	var rotatePoint = Math.rotatePoint;
 	var pow = Math.pow;
 	var width = L.system.width;
@@ -194,7 +215,7 @@ L.game.main = function() {
 	    return;
 	}
 
-	var relativeAngle = Math.atan(-(relativeCoords.y) / (relativeCoords.x + 2));
+	var relativeAngle = Math.atan(-(relativeCoords.y) / (relativeCoords.x + 3));
 
 	if ((Math.abs(relativeAngle) > camera.viewAngle / 2) && (distance > 2))
 	{
@@ -212,7 +233,7 @@ L.game.main = function() {
 	var vertices = this.vertices;
 	var numberOfCoords = vertices.length + 1;
 	var coords = [];
-
+//var scaleFactor =1+ (this.distanceScaleFactor-1)*(distance-1);
 	for (var i = 0; i < numberOfCoords; i++)
 	{
 	    if (i === numberOfCoords - 1)
@@ -223,9 +244,9 @@ L.game.main = function() {
 	    }
 	    else
 	    {
-		x = vertices[i][0]*1.01 + worldX;
-		y = vertices[i][1] *1.01 + worldY;
-		z = vertices[i][2] *1.01 + worldZ;
+		x = vertices[i][0] + worldX;
+		y = vertices[i][1] + worldY;
+		z = vertices[i][2] + worldZ;
 	    }
 	    var rotatedPoint;
 	    if (camera.yaw !== 0)
@@ -315,6 +336,8 @@ L.game.main = function() {
 
 
     };
+
+    var triangleObject = new L.objects.Triangle2D([[0,0],[0,0],[0,0]]);
     texel.prototype.draw = function(ctx, camera)
     {
 
@@ -347,8 +370,11 @@ L.game.main = function() {
 	    }
 	    trisLength = tris.length;
 	    var fogColor = camera.color;
-	    var fogColorString = "rgba(" + fogColor[0] + "," + fogColor[1] + "," + fogColor[2] + "," + (fogColor[3] * Math.pow(shadow, 0.5)) + ")";
-	    ctx.fillStyle = fogColorString;
+	    var fogColorString = "rgba(" + fogColor[0] + "," + fogColor[1] + "," + fogColor[2] + "," + (fogColor[3] * Math.pow(shadow, camera.distanceDecay * 2)) + ")";
+	    if (ctx.fillStyle !== fogColorString)
+	    {
+		ctx.fillStyle = fogColorString;
+	    }
 
 	    var pp, pp0, pp1, pp2;
 	    var x0, x1, x2;
@@ -356,7 +382,7 @@ L.game.main = function() {
 	    var u0, u1, u2;
 	    var v0, v1, v2;
 	    var deltaRecip;
-	    var hScale, hSkew, vSkew, vScale, hMove, vMove;
+	    //var hScale, hSkew, vSkew, vScale, hMove, vMove;
 	    for (var t = 0; t < trisLength; t++) {
 		pp = tris[t];
 		pp0 = pp[0];
@@ -366,6 +392,29 @@ L.game.main = function() {
 		y0 = coords[pp0][1], y1 = coords[pp1][1], y2 = coords[pp2][1];
 		u0 = texCoords[pp0][0], u1 = texCoords[pp1][0], u2 = texCoords[pp2][0];
 		v0 = texCoords[pp0][1], v1 = texCoords[pp1][1], v2 = texCoords[pp2][1];
+
+//Use the triangle object to expand each triangle uniformly by its bisectors.
+
+triangleObject.x1 = x0;
+triangleObject.x2 = x1;
+triangleObject.x3 = x2;
+
+triangleObject.y1 = y0;
+triangleObject.y2 = y1;
+triangleObject.y3 = y2;
+
+triangleObject.growBy(1);
+
+x0 = triangleObject.x1;
+x1 = triangleObject.x2;
+x2 = triangleObject.x3;
+
+y0 = triangleObject.y1;
+y1 = triangleObject.y2;
+y2 = triangleObject.y3;
+
+
+
 
 		// Set clipping area so that only pixels inside the triangle will
 		// be affected by the image drawing operation
@@ -378,28 +427,55 @@ L.game.main = function() {
 		ctx.clip();
 
 		// Compute matrix transform
+		/**
+		 deltaRecip = 1 / (u0 * v1 + v0 * u2 + u1 * v2 - v1 * u2 - v0 * u1 - u0 * v2);
+		 hScale = (x0 * v1 + v0 * x2 + x1 * v2 - v1 * x2 - v0 * x1 - x0 * v2) * deltaRecip;
+		 hSkew = (y0 * v1 + v0 * y2 + y1 * v2 - v1 * y2 - v0 * y1 - y0 * v2) * deltaRecip;
+		 vSkew = (u0 * x1 + x0 * u2 + u1 * x2 - x1 * u2 - x0 * u1 - u0 * x2) * deltaRecip;
+		 vScale = (u0 * y1 + y0 * u2 + u1 * y2 - y1 * u2 - y0 * u1 - u0 * y2) * deltaRecip;
+		 hMove = (u0 * v1 * x2 + v0 * x1 * u2 + x0 * u1 * v2 - x0 * v1 * u2
+		 - v0 * u1 * x2 - u0 * x1 * v2) * deltaRecip;
+		 vMove = (u0 * v1 * y2 + v0 * y1 * u2 + y0 * u1 * v2 - y0 * v1 * u2 - v0 * u1 * y2 - u0 * y1 * v2) * deltaRecip;
+		 ctx.save();
 
-		//var u0v1 = u0 * v1;
-		//var u1v2 = u1 * v2;
-		//var v0u1 = v0 * u1;
-		deltaRecip = 1 / (u0 * v1 + v0 * u2 + u1 * v2 - v1 * u2 - v0 * u1 - u0 * v2);
-		hScale = (x0 * v1 + v0 * x2 + x1 * v2 - v1 * x2 - v0 * x1 - x0 * v2) * deltaRecip;
-		hSkew = (y0 * v1 + v0 * y2 + y1 * v2 - v1 * y2 - v0 * y1 - y0 * v2) * deltaRecip;
-		vSkew = (u0 * x1 + x0 * u2 + u1 * x2 - x1 * u2 - x0 * u1 - u0 * x2) * deltaRecip;
-		vScale = (u0 * y1 + y0 * u2 + u1 * y2 - y1 * u2 - y0 * u1 - u0 * y2) * deltaRecip;
-		hMove = (u0 * v1 * x2 + v0 * x1 * u2 + x0 * u1 * v2 - x0 * v1 * u2
-		- v0 * u1 * x2 - u0 * x1 * v2) * deltaRecip;
-		vMove = (u0 * v1 * y2 + v0 * y1 * u2 + y0 * u1 * v2 - y0 * v1 * u2 - v0 * u1 * y2 - u0 * y1 * v2) * deltaRecip;
+		 // Draw the transformed image
+		 ctx.transform(hScale, hSkew, vSkew, vScale, hMove, vMove);
+		 **/
+		// Inlining transformation equations
 		ctx.save();
-		// Draw the transformed image
-		ctx.transform(hScale, hSkew, vSkew, vScale, hMove, vMove);
-		ctx.drawImage(texture, 0, 0);
+		deltaRecip = 1 / (u0 * v1 + v0 * u2 + u1 * v2 - v1 * u2 - v0 * u1 - u0 * v2);
+		ctx.transform(
+		(x0 * v1 + v0 * x2 + x1 * v2 - v1 * x2 - v0 * x1 - x0 * v2) * deltaRecip,
+		(y0 * v1 + v0 * y2 + y1 * v2 - v1 * y2 - v0 * y1 - y0 * v2) * deltaRecip,
+		(u0 * x1 + x0 * u2 + u1 * x2 - x1 * u2 - x0 * u1 - u0 * x2) * deltaRecip,
+		(u0 * y1 + y0 * u2 + u1 * y2 - y1 * u2 - y0 * u1 - u0 * y2) * deltaRecip,
+		(u0 * v1 * x2 + v0 * x1 * u2 + x0 * u1 * v2 - x0 * v1 * u2 - v0 * u1 * x2 - u0 * x1 * v2) * deltaRecip,
+		(u0 * v1 * y2 + v0 * y1 * u2 + y0 * u1 * v2 - y0 * v1 * u2 - v0 * u1 * y2 - u0 * y1 * v2) * deltaRecip
+		);
+
+
+
+
+
+		//  ctx.fillStyle = stonePattern;
+		//  ctx.fill();
+
+		try {
+		    ctx.drawImage(texture, 0, 0);
+		}
+		catch (e) {
+		    ctx.fillStyle = this.texture;
+		    ctx.fill();
+		}
+
 
 		ctx.restore();
 		if (this.hasShadow)
 		{
-
-		    // ctx.fillStyle = fogColorString;
+		    if (ctx.fillStyle !== fogColorString)
+		    {
+			ctx.fillStyle = fogColorString;
+		    }
 		    x1 = this.xMin - 2;
 		    y1 = this.yMin - 2;
 		    x2 = (this.xMax - x1) + 2;
@@ -452,7 +528,7 @@ L.game.main = function() {
 
 
     };
-    // var grassPattern = L.system.bufferContext[0].createPattern(L.texture.grass, "repeat");
+    //var grassPattern = L.system.bufferContext[0].createPattern(L.texture.grass, "repeat");
     for (var i = 0; i < 16; i++)
     {
 	for (var j = 0; j < 64; j++)
@@ -462,6 +538,10 @@ L.game.main = function() {
 
 	    tex1.rgba = [100 + (Math.random() * 100), 100 + (Math.random() * 100), 30, 1];
 	    tex1.texture = L.texture.grass;
+	    //tex1.texture = grassPattern;
+	    tex1.scale(2);
+	    tex1.x *= 2;
+	    tex1.z *= 2;
 	    tex1.texCoords = [
 		[0, 0],
 		[L.texture.grass.width, 0],
@@ -469,7 +549,7 @@ L.game.main = function() {
 		[0, L.texture.grass.height],
 		[L.texture.grass.width / 2, L.texture.grass.height / 2]
 	    ];
-
+	    tex1.distanceScaleFactor = 1.01;
 	    // tex2.rgba = [255,255,255,1];
 
 	    testLayer.addObject(tex1);
@@ -535,7 +615,7 @@ L.game.main = function() {
 	    var z = (z1 + z2) / 2;
 	    var newWall = new texel(x, 0, z);
 	    newWall.color = color;
-	    newWall.texture = L.texture.stone;
+	    newWall.texture = L.texture.temple;
 
 	    newWall.vertices = [
 		[x1 - x, 0, z1 - z],
@@ -545,10 +625,10 @@ L.game.main = function() {
 	    ];
 	    newWall.texCoords = [
 		[0, 0],
-		[L.texture.stone.width, 0],
-		[L.texture.stone.width, L.texture.stone.height],
-		[0, L.texture.stone.height],
-		[L.texture.stone.width / 2, L.texture.stone.height / 2]
+		[L.texture.temple.width, 0],
+		[L.texture.temple.width, L.texture.temple.height],
+		[0, L.texture.temple.height],
+		[L.texture.temple.width / 2, L.texture.temple.height / 2]
 	    ];
 
 	    return newWall;
@@ -557,11 +637,11 @@ L.game.main = function() {
     var stonePattern = L.system.bufferContext[0].createPattern(L.texture.stone, "repeat");
     var tileColor = "grey";
     var wallrgba = [255, 255, 255, 1];
-    for (var row = 0; row < 2; row++)
+    for (var row = 0; row < 4; row++)
     {
 	for (var walls = 0; walls < 32; walls++)
 	{
-	    var wall1 = new wall(-1 + row * 2, -0.01 + walls, -1 + row * 2, 1.01 + walls, 2, tileColor);
+	    var wall1 = new wall(-3 + row * 2, -0.0 + walls, -3 + row * 2, 1.0 + walls, 2, tileColor);
 	    var grey = 200 + Math.random() * 55;
 	    wall1.rgba = [255, 0, 0, 1];
 	    sortables.objects.push(wall1);
@@ -634,6 +714,7 @@ L.game.main = function() {
 	this.shadow = 0;
 	this.distance = 0;
 	this.zScale = 0;
+	this.flipY = false;
     };
 
     Sprite3D.prototype.setTexture = function(textureName)
@@ -810,12 +891,17 @@ L.game.main = function() {
 	ctx.save();
 	ctx.translate(x0, y0);
 	ctx.scale(proportion, proportion);
-	ctx.drawImage(L.texture.treeMaskYellow, -this.handle.x, -this.handle.y);
+	if (this.flipY)
+	{
+	    ctx.scale(-1, 1);
+	}
+	ctx.drawImage(this.maskTexture, -this.handle.x, -this.handle.y);
 	var distanceFade = this.distance / camera.distance;
 	if (distanceFade >= 1) {
 	    distanceFade = 1;
 	}
 	ctx.globalAlpha = 1 - distanceFade;
+
 	ctx.drawImage(this.texture, -this.handle.x, -this.handle.y);
 	ctx.globalAlpha = 1;
 	ctx.restore();
@@ -833,20 +919,60 @@ L.game.main = function() {
 	    tree01.height = 4;
 	    tree01.x = -2 + treeCount * 4;
 	    tree01.z = -1.5 + treeRows * 3;
-	    // sortables.objects.push(tree01);
+	    tree01.maskTexture = L.texture.treeMaskYellow;
+	    sortables.objects.push(tree01);
 	}
+    }
+
+    // FLOWERS
+    var flowerColors = ["flowerRed", "flowerYellow", "flowerCyan"];
+    for (var flowerCount = 0; flowerCount < 100; flowerCount++)
+    {
+	var flower = new Sprite3D();
+	flower.setTexture(flowerColors[Math.floor(Math.random() * 3)]);
+	flower.handle = {
+	    x: 28.5,
+	    y: 62.5
+	};
+	flower.height = 0.4 + Math.random() * 0.3;
+	flower.x = -2 + (Math.random() - 0.5) * 40;
+	flower.z = -3.5 + (Math.random() - 0.5) * 40;
+	flower.maskTexture = L.texture.flowerRedMask;
+	flower.flipY = (Math.random() > 0.5) ? true : false;
+	sortables.objects.push(flower);
     }
 
 
 
+// MASK TESTING
+    var treeMask = new L.objects.SpriteMask("tree", 0, 255, 0);
+//L.textures["treemask"] = treeMask;
+    treeMask.saveAs("treemask");
+    var testMask = new L.objects.Sprite("treemask");
+    testMask.setScale(0.5);
+    testMask.onClick = function()
+    {
+	treeMask.setColor(Math.random() * 255, Math.random() * 255, Math.random() * 255);
 
+    };
 
 
     testLayer.addObject(sortables);
+    //  testLayer.addObject(testMask);
     testLayer.addObject(camera);
 
+    /*
+testLayer.visible = false;
+testLayer.updating = false;
+
+var triangle2 = new L.objects.Triangle2D([[100,100],[100,200],[200,100]]);
+var triangle1 = new L.objects.Triangle2D([[100,100],[100,200],[200,100]]);
+triangle1.growBy(50);
+testArena.layers.background.addObjects(triangle1,triangle2);
+*/
 
     testArena.setScene();
+
 
     var moveCamera = function(distance, strafe)
     {
